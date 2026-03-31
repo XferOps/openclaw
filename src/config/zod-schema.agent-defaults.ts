@@ -14,6 +14,16 @@ import {
   TypingModeSchema,
 } from "./zod-schema.core.js";
 
+const HizalConfigSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    lifecycleSlug: z.string().optional(),
+    projectId: z.string().optional(),
+    serverName: z.string().optional(),
+  })
+  .strict()
+  .optional();
+
 export const AgentDefaultsSchema = z
   .object({
     model: AgentModelSchema.optional(),
@@ -52,6 +62,7 @@ export const AgentDefaultsSchema = z
     contextTokens: z.number().int().positive().optional(),
     cliBackends: z.record(z.string(), CliBackendSchema).optional(),
     memorySearch: MemorySearchSchema,
+    hizal: HizalConfigSchema,
     contextPruning: z
       .object({
         mode: z.union([z.literal("off"), z.literal("cache-ttl")]).optional(),

@@ -1,6 +1,8 @@
 import type { OpenClawConfig } from "../config/config.js";
+import { isCronSessionKey, isSubagentSessionKey } from "../routing/session-key.js";
 import { getOrLoadBootstrapFiles } from "./bootstrap-cache.js";
 import { applyBootstrapHookOverrides } from "./bootstrap-hooks.js";
+import { createSyntheticIdentityBootstrapFile, resolveHizalIdentity } from "./hizal-identity.js";
 import type { EmbeddedContextFile } from "./pi-embedded-helpers.js";
 import {
   buildBootstrapContextFiles,
@@ -61,6 +63,40 @@ function applyContextModeFilter(params: {
   return [];
 }
 
+async function applyHizalIdentityOverlay(params: {
+  files: WorkspaceBootstrapFile[];
+  workspaceDir: string;
+  config?: OpenClawConfig;
+  sessionKey?: string;
+  sessionId?: string;
+  agentId?: string;
+}): Promise<WorkspaceBootstrapFile[]> {
+  const sessionKey = params.sessionKey ?? params.sessionId;
+  if (!params.config || !params.agentId) {
+    return params.files;
+  }
+  if (isSubagentSessionKey(sessionKey) || isCronSessionKey(sessionKey)) {
+    return params.files;
+  }
+  const identity = await resolveHizalIdentity({
+    openclawSessionId: params.sessionId ?? params.sessionKey ?? "bootstrap",
+    sessionKey: params.sessionKey,
+    workspaceDir: params.workspaceDir,
+    cfg: params.config,
+    agentId: params.agentId,
+  });
+  if (!identity) {
+    return params.files;
+  }
+  return [
+    ...params.files.filter((file) => file.name !== "IDENTITY.md"),
+    createSyntheticIdentityBootstrapFile({
+      workspaceDir: params.workspaceDir,
+      content: identity.markdown,
+    }),
+  ];
+}
+
 export async function resolveBootstrapFilesForRun(params: {
   workspaceDir: string;
   config?: OpenClawConfig;
@@ -83,9 +119,17 @@ export async function resolveBootstrapFilesForRun(params: {
     contextMode: params.contextMode,
     runKind: params.runKind,
   });
+  const hizalAdjustedFiles = await applyHizalIdentityOverlay({
+    files: bootstrapFiles,
+    workspaceDir: params.workspaceDir,
+    config: params.config,
+    sessionKey: params.sessionKey,
+    sessionId: params.sessionId,
+    agentId: params.agentId,
+  });
 
   const updated = await applyBootstrapHookOverrides({
-    files: bootstrapFiles,
+    files: hizalAdjustedFiles,
     workspaceDir: params.workspaceDir,
     config: params.config,
     sessionKey: params.sessionKey,

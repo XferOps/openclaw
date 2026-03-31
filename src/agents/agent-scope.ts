@@ -3,6 +3,7 @@ import path from "node:path";
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveAgentModelFallbackValues } from "../config/model-input.js";
 import { resolveStateDir } from "../config/paths.js";
+import type { HizalAgentConfig } from "../config/types.hizal.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   DEFAULT_AGENT_ID,
@@ -41,6 +42,7 @@ type ResolvedAgentConfig = {
   fastModeDefault?: AgentEntry["fastModeDefault"];
   skills?: AgentEntry["skills"];
   memorySearch?: AgentEntry["memorySearch"];
+  hizal?: AgentEntry["hizal"];
   humanDelay?: AgentEntry["humanDelay"];
   heartbeat?: AgentEntry["heartbeat"];
   identity?: AgentEntry["identity"];
@@ -146,6 +148,7 @@ export function resolveAgentConfig(
     fastModeDefault: entry.fastModeDefault,
     skills: Array.isArray(entry.skills) ? entry.skills : undefined,
     memorySearch: entry.memorySearch,
+    hizal: typeof entry.hizal === "object" && entry.hizal ? entry.hizal : undefined,
     humanDelay: entry.humanDelay,
     heartbeat: entry.heartbeat,
     identity: entry.identity,
@@ -161,6 +164,23 @@ export function resolveAgentSkillsFilter(
   agentId: string,
 ): string[] | undefined {
   return normalizeSkillFilter(resolveAgentConfig(cfg, agentId)?.skills);
+}
+
+export function resolveAgentHizalConfig(
+  cfg: OpenClawConfig,
+  agentId: string,
+): HizalAgentConfig | undefined {
+  const defaults = cfg.agents?.defaults?.hizal;
+  const overrides = resolveAgentConfig(cfg, agentId)?.hizal;
+  if (!defaults && !overrides) {
+    return undefined;
+  }
+  return {
+    enabled: overrides?.enabled ?? defaults?.enabled,
+    lifecycleSlug: overrides?.lifecycleSlug ?? defaults?.lifecycleSlug,
+    projectId: overrides?.projectId ?? defaults?.projectId,
+    serverName: overrides?.serverName ?? defaults?.serverName,
+  };
 }
 
 function resolveModelPrimary(raw: unknown): string | undefined {

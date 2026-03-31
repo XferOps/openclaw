@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearInternalHooks,
   registerInternalHook,
@@ -9,6 +9,16 @@ import {
 import { makeTempWorkspace } from "../test-helpers/workspace.js";
 import { resolveBootstrapContextForRun, resolveBootstrapFilesForRun } from "./bootstrap-files.js";
 import type { WorkspaceBootstrapFile } from "./workspace.js";
+
+const resolveHizalIdentity = vi.hoisted(() => vi.fn());
+
+vi.mock("./hizal-identity.js", async () => {
+  const actual = await vi.importActual<typeof import("./hizal-identity.js")>("./hizal-identity.js");
+  return {
+    ...actual,
+    resolveHizalIdentity,
+  };
+});
 
 function registerExtraBootstrapFileHook() {
   registerInternalHook("agent:bootstrap", (event) => {
@@ -54,7 +64,10 @@ function registerMalformedBootstrapFileHook() {
 
 describe("resolveBootstrapFilesForRun", () => {
   beforeEach(() => clearInternalHooks());
-  afterEach(() => clearInternalHooks());
+  afterEach(() => {
+    clearInternalHooks();
+    resolveHizalIdentity.mockReset();
+  });
 
   it("applies bootstrap hook overrides", async () => {
     registerExtraBootstrapFileHook();
@@ -80,6 +93,33 @@ describe("resolveBootstrapFilesForRun", () => {
     ).toBe(true);
     expect(warnings).toHaveLength(3);
     expect(warnings[0]).toContain('missing or invalid "path" field');
+  });
+
+  it("replaces local IDENTITY.md with Hizal identity when enabled", async () => {
+    const workspaceDir = await makeTempWorkspace("openclaw-bootstrap-");
+    await fs.writeFile(path.join(workspaceDir, "IDENTITY.md"), "local identity", "utf8");
+    resolveHizalIdentity.mockResolvedValue({
+      markdown: "# Hizal Identity\n\nremote identity\n",
+    });
+
+    const files = await resolveBootstrapFilesForRun({
+      workspaceDir,
+      config: {
+        agents: {
+          defaults: {
+            hizal: { enabled: true },
+          },
+          list: [{ id: "main" }],
+        },
+      },
+      sessionKey: "agent:main:direct:test",
+      sessionId: "openclaw-session-3",
+      agentId: "main",
+    });
+
+    const identity = files.find((file) => file.name === "IDENTITY.md");
+    expect(identity?.content).toContain("remote identity");
+    expect(identity?.path).toContain(path.join(".openclaw", "hizal", "IDENTITY.md"));
   });
 });
 

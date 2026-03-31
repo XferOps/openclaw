@@ -98,9 +98,20 @@ const fallbackManager = vi.hoisted(() => ({
 const fallbackSearch = fallbackManager.search;
 const mockMemoryIndexGet = vi.hoisted(() => vi.fn(async () => fallbackManager));
 const mockCloseAllMemoryIndexManagers = vi.hoisted(() => vi.fn(async () => {}));
+const callHizalTool = vi.hoisted(() => vi.fn());
 const checkQmdBinaryAvailability = vi.hoisted(() =>
   vi.fn<CheckQmdBinaryAvailability>(async () => ({ available: true })),
 );
+
+vi.mock("openclaw/plugin-sdk/memory-core-host-engine-foundation", async () => {
+  const actual = await vi.importActual<
+    typeof import("openclaw/plugin-sdk/memory-core-host-engine-foundation")
+  >("openclaw/plugin-sdk/memory-core-host-engine-foundation");
+  return {
+    ...actual,
+    callHizalTool,
+  };
+});
 
 vi.mock("./qmd-manager.js", () => ({
   QmdMemoryManager: {
@@ -169,6 +180,7 @@ beforeEach(async () => {
   mockMemoryIndexGet.mockResolvedValue(fallbackManager);
   checkQmdBinaryAvailability.mockClear();
   checkQmdBinaryAvailability.mockResolvedValue({ available: true });
+  callHizalTool.mockReset();
   createQmdManagerMock.mockClear();
 });
 
@@ -218,6 +230,76 @@ describe("getMemorySearchManager caching", () => {
     expect(createQmdManagerMock).not.toHaveBeenCalled();
     expect(mockMemoryIndexGet).toHaveBeenCalled();
     expect(searchResults).toHaveLength(1);
+  });
+
+  it("creates a Hizal-backed memory manager when backend is hizal", async () => {
+    const cfg: OpenClawConfig = {
+      memory: { backend: "hizal" },
+      agents: {
+        defaults: {
+          hizal: { enabled: true, serverName: "hizal" },
+        },
+        list: [{ id: "main", default: true, workspace: "/tmp/workspace" }],
+      },
+    };
+    callHizalTool.mockResolvedValueOnce({
+      results: [
+        {
+          id: "chunk-1",
+          query_key: "memory-1",
+          title: "Debug note",
+          content: "remember this",
+          score: 0.91,
+        },
+      ],
+    });
+
+    const result = await getMemorySearchManager({ cfg, agentId: "main" });
+    const manager = requireManager(result);
+    const rows = await manager.search("remember", { sessionKey: "agent:main:direct:test" });
+
+    expect(rows[0]?.path).toBe("hizal:id:chunk-1");
+    expect(rows[0]?.snippet).toBe("remember this");
+    expect(callHizalTool).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolName: "search_context",
+        input: expect.objectContaining({
+          query: "remember",
+          scope: "AGENT",
+          chunk_type: "MEMORY",
+        }),
+      }),
+    );
+  });
+
+  it("reads a Hizal memory chunk by synthetic path", async () => {
+    const cfg: OpenClawConfig = {
+      memory: { backend: "hizal" },
+      agents: {
+        defaults: {
+          hizal: { enabled: true, serverName: "hizal" },
+        },
+        list: [{ id: "main", default: true, workspace: "/tmp/workspace" }],
+      },
+    };
+    callHizalTool.mockResolvedValueOnce({
+      id: "chunk-1",
+      query_key: "memory-1",
+      title: "Debug note",
+      content: "line one\nline two\nline three",
+    });
+
+    const result = await getMemorySearchManager({ cfg, agentId: "main" });
+    const manager = requireManager(result);
+    const read = await manager.readFile({ relPath: "hizal:id:chunk-1", from: 2, lines: 1 });
+
+    expect(read).toEqual({ path: "hizal:id:chunk-1", text: "line two" });
+    expect(callHizalTool).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolName: "read_context",
+        input: { id: "chunk-1" },
+      }),
+    );
   });
 
   it("probes qmd availability from the agent workspace", async () => {

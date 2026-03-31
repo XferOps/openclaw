@@ -48,6 +48,20 @@ export async function getMemorySearchManager(params: {
   purpose?: "default" | "status";
 }): Promise<MemorySearchManagerResult> {
   const resolved = resolveMemoryBackendConfig(params);
+  if (resolved.backend === "hizal") {
+    try {
+      const { HizalMemorySearchManager } = await import("./hizal-search-manager.js");
+      return {
+        manager: HizalMemorySearchManager.create({
+          cfg: params.cfg,
+          agentId: params.agentId,
+        }),
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { manager: null, error: message };
+    }
+  }
   if (resolved.backend === "qmd" && resolved.qmd) {
     const statusOnly = params.purpose === "status";
     const baseCacheKey = buildQmdCacheKey(params.agentId, resolved.qmd);

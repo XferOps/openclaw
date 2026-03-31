@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import { normalizeConversationText } from "../../acp/conversation-id.js";
-import { resolveSessionAgentId } from "../../agents/agent-scope.js";
+import { resolveAgentWorkspaceDir, resolveSessionAgentId } from "../../agents/agent-scope.js";
 import { clearBootstrapSnapshotOnSessionRollover } from "../../agents/bootstrap-cache.js";
+import { endHizalSession } from "../../agents/hizal-session.js";
 import { disposeSessionMcpRuntime } from "../../agents/pi-bundle-mcp-tools.js";
 import { normalizeChatType } from "../../channels/chat-type.js";
 import type { OpenClawConfig } from "../../config/config.js";
@@ -633,6 +634,13 @@ export async function initSessionState(params: {
 
   // Archive old transcript so it doesn't accumulate on disk (#14869).
   if (previousSessionEntry?.sessionId) {
+    await endHizalSession({
+      openclawSessionId: previousSessionEntry.sessionId,
+      sessionKey,
+      workspaceDir: resolveAgentWorkspaceDir(cfg, agentId),
+      cfg,
+      agentId,
+    }).catch(() => {});
     const { archiveSessionTranscripts } = await loadSessionArchiveRuntime();
     archiveSessionTranscripts({
       sessionId: previousSessionEntry.sessionId,

@@ -3,8 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { CURRENT_SESSION_VERSION } from "@mariozechner/pi-coding-agent";
 import { getAcpSessionManager } from "../acp/control-plane/manager.js";
-import { resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { clearBootstrapSnapshot } from "../agents/bootstrap-cache.js";
+import { endHizalSession } from "../agents/hizal-session.js";
 import { abortEmbeddedPiRun, waitForEmbeddedPiRunEnd } from "../agents/pi-embedded.js";
 import { stopSubagentsForRequester } from "../auto-reply/reply/abort.js";
 import { clearSessionQueues } from "../auto-reply/reply/queue.js";
@@ -281,6 +282,15 @@ export async function performGatewaySessionReset(params: {
     },
   );
   await triggerInternalHook(hookEvent);
+  if (entry?.sessionId && !isSubagentSessionKey(target.canonicalKey ?? params.key)) {
+    await endHizalSession({
+      openclawSessionId: entry.sessionId,
+      sessionKey: target.canonicalKey ?? params.key,
+      workspaceDir: resolveAgentWorkspaceDir(cfg, target.agentId),
+      cfg,
+      agentId: target.agentId,
+    }).catch(() => {});
+  }
   const mutationCleanupError = await cleanupSessionBeforeMutation({
     cfg,
     key: params.key,

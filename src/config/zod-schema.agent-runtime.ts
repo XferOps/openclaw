@@ -793,6 +793,15 @@ export const AgentEntrySchema = z
     fastModeDefault: z.boolean().optional(),
     skills: z.array(z.string()).optional(),
     memorySearch: MemorySearchSchema,
+    hizal: z
+      .object({
+        enabled: z.boolean().optional(),
+        lifecycleSlug: z.string().optional(),
+        projectId: z.string().optional(),
+        serverName: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     humanDelay: HumanDelaySchema.optional(),
     heartbeat: HeartbeatSchema,
     identity: IdentitySchema,

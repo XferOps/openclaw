@@ -47,6 +47,9 @@ export type MemoryRuntimeBackendConfig =
       backend: "builtin";
     }
   | {
+      backend: "hizal";
+    }
+  | {
       backend: "qmd";
       qmd?: MemoryRuntimeQmdConfig;
     };

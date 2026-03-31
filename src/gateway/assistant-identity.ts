@@ -1,4 +1,6 @@
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { resolveAgentHizalConfig } from "../agents/agent-scope.js";
+import { readHizalIdentitySnapshotSync } from "../agents/hizal-state.js";
 import { resolveAgentIdentity } from "../agents/identity.js";
 import { loadAgentIdentity } from "../commands/agents.config.js";
 import type { OpenClawConfig } from "../config/config.js";
@@ -87,31 +89,46 @@ export function resolveAssistantIdentity(params: {
   const workspaceDir = params.workspaceDir ?? resolveAgentWorkspaceDir(params.cfg, agentId);
   const configAssistant = params.cfg.ui?.assistant;
   const agentIdentity = resolveAgentIdentity(params.cfg, agentId);
+  const hizalEnabled = resolveAgentHizalConfig(params.cfg, agentId)?.enabled === true;
+  const hizalIdentity =
+    workspaceDir && hizalEnabled ? readHizalIdentitySnapshotSync(workspaceDir) : null;
   const fileIdentity = workspaceDir ? loadAgentIdentity(workspaceDir) : null;
 
   const name =
-    coerceIdentityValue(configAssistant?.name, MAX_ASSISTANT_NAME) ??
-    coerceIdentityValue(agentIdentity?.name, MAX_ASSISTANT_NAME) ??
-    coerceIdentityValue(fileIdentity?.name, MAX_ASSISTANT_NAME) ??
+    (hizalEnabled
+      ? coerceIdentityValue(hizalIdentity?.name ?? hizalIdentity?.title, MAX_ASSISTANT_NAME)
+      : (coerceIdentityValue(configAssistant?.name, MAX_ASSISTANT_NAME) ??
+        coerceIdentityValue(agentIdentity?.name, MAX_ASSISTANT_NAME) ??
+        coerceIdentityValue(fileIdentity?.name, MAX_ASSISTANT_NAME))) ??
     DEFAULT_ASSISTANT_IDENTITY.name;
 
-  const avatarCandidates = [
-    coerceIdentityValue(configAssistant?.avatar, MAX_ASSISTANT_AVATAR),
-    coerceIdentityValue(agentIdentity?.avatar, MAX_ASSISTANT_AVATAR),
-    coerceIdentityValue(agentIdentity?.emoji, MAX_ASSISTANT_AVATAR),
-    coerceIdentityValue(fileIdentity?.avatar, MAX_ASSISTANT_AVATAR),
-    coerceIdentityValue(fileIdentity?.emoji, MAX_ASSISTANT_AVATAR),
-  ];
+  const avatarCandidates = hizalEnabled
+    ? [
+        coerceIdentityValue(hizalIdentity?.avatar, MAX_ASSISTANT_AVATAR),
+        coerceIdentityValue(hizalIdentity?.emoji, MAX_ASSISTANT_AVATAR),
+      ]
+    : [
+        coerceIdentityValue(configAssistant?.avatar, MAX_ASSISTANT_AVATAR),
+        coerceIdentityValue(agentIdentity?.avatar, MAX_ASSISTANT_AVATAR),
+        coerceIdentityValue(agentIdentity?.emoji, MAX_ASSISTANT_AVATAR),
+        coerceIdentityValue(fileIdentity?.avatar, MAX_ASSISTANT_AVATAR),
+        coerceIdentityValue(fileIdentity?.emoji, MAX_ASSISTANT_AVATAR),
+      ];
   const avatar =
     avatarCandidates.map((candidate) => normalizeAvatarValue(candidate)).find(Boolean) ??
     DEFAULT_ASSISTANT_IDENTITY.avatar;
 
-  const emojiCandidates = [
-    coerceIdentityValue(agentIdentity?.emoji, MAX_ASSISTANT_EMOJI),
-    coerceIdentityValue(fileIdentity?.emoji, MAX_ASSISTANT_EMOJI),
-    coerceIdentityValue(agentIdentity?.avatar, MAX_ASSISTANT_EMOJI),
-    coerceIdentityValue(fileIdentity?.avatar, MAX_ASSISTANT_EMOJI),
-  ];
+  const emojiCandidates = hizalEnabled
+    ? [
+        coerceIdentityValue(hizalIdentity?.emoji, MAX_ASSISTANT_EMOJI),
+        coerceIdentityValue(hizalIdentity?.avatar, MAX_ASSISTANT_EMOJI),
+      ]
+    : [
+        coerceIdentityValue(agentIdentity?.emoji, MAX_ASSISTANT_EMOJI),
+        coerceIdentityValue(fileIdentity?.emoji, MAX_ASSISTANT_EMOJI),
+        coerceIdentityValue(agentIdentity?.avatar, MAX_ASSISTANT_EMOJI),
+        coerceIdentityValue(fileIdentity?.avatar, MAX_ASSISTANT_EMOJI),
+      ];
   const emoji = emojiCandidates.map((candidate) => normalizeEmojiValue(candidate)).find(Boolean);
 
   return { agentId, name, avatar, emoji };
