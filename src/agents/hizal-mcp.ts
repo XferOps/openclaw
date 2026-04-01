@@ -1,6 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { OpenClawConfig } from "../config/config.js";
-import { getOrCreateSessionMcpRuntime } from "./pi-bundle-mcp-tools.js";
+import { disposeSessionMcpRuntime, getOrCreateSessionMcpRuntime } from "./pi-bundle-mcp-tools.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -66,30 +66,36 @@ function extractStructuredContent<T>(result: CallToolResult, toolName: string): 
   throw new Error(`MCP tool ${toolName} did not return structured content`);
 }
 
-export async function assertHizalServerAvailable(params: HizalMcpBaseParams): Promise<string> {
-  const runtime = await getOrCreateSessionMcpRuntime({
+async function getHizalRuntime(params: HizalMcpBaseParams) {
+  return await getOrCreateSessionMcpRuntime({
     sessionId: params.openclawSessionId,
     sessionKey: params.sessionKey,
     workspaceDir: params.workspaceDir,
     cfg: params.cfg,
   });
+}
+
+export async function assertHizalServerAvailable(
+  params: HizalMcpBaseParams,
+): Promise<{ runtime: Awaited<ReturnType<typeof getHizalRuntime>>; serverName: string }> {
   const expectedServerName = params.serverName?.trim() || "hizal";
-  const catalog = await runtime.getCatalog();
-  const matched = catalog.tools.find((tool) => tool.serverName === expectedServerName);
-  if (!matched) {
-    throw new Error(`Hizal MCP server "${expectedServerName}" is not configured or has no tools`);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const runtime = await getHizalRuntime(params);
+    const catalog = await runtime.getCatalog();
+    const matched = catalog.tools.find((tool) => tool.serverName === expectedServerName);
+    if (matched) {
+      return { runtime, serverName: matched.serverName };
+    }
+    if (attempt === 0) {
+      await disposeSessionMcpRuntime(params.openclawSessionId).catch(() => {});
+      continue;
+    }
   }
-  return matched.serverName;
+  throw new Error(`Hizal MCP server "${expectedServerName}" is not configured or has no tools`);
 }
 
 export async function callHizalTool<T>(params: CallHizalToolParams): Promise<T> {
-  const runtime = await getOrCreateSessionMcpRuntime({
-    sessionId: params.openclawSessionId,
-    sessionKey: params.sessionKey,
-    workspaceDir: params.workspaceDir,
-    cfg: params.cfg,
-  });
-  const serverName = await assertHizalServerAvailable(params);
+  const { runtime, serverName } = await assertHizalServerAvailable(params);
   const result = await runtime.callTool(serverName, params.toolName, params.input ?? {});
   return extractStructuredContent<T>(result, params.toolName);
 }

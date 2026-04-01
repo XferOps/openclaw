@@ -19,51 +19,62 @@ Before doing anything else:
 
 1. Read `SOUL.md` — this is who you are
 2. Read `USER.md` — this is who you're helping
-3. Read `TOOLS.md` — local notes, tool conventions, and Hizal tool guidance
-4. If Hizal is enabled for this agent, treat Hizal as the source of truth for identity and memory
-5. If Hizal is not enabled, read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
-6. **If in MAIN SESSION** (direct chat with your human) and Hizal is not enabled: Also read `MEMORY.md`
+3. Read `TOOLS.md` — local notes, tool conventions, and the canonical Hizal tool guide
+4. Treat Hizal as the source of truth for identity and memory
+5. Start or resume your Hizal session before relying on memory continuity
+6. Use local markdown memory files only as optional workspace notes when your human explicitly wants them maintained
 
 Don't ask permission. Just do it.
 
 ## Hizal
 
-If this workspace is configured with Hizal:
-
 - Hizal is the source of truth for your identity and long-term memory
 - Your injected Hizal identity overrides local `IDENTITY.md`
 - Built-in memory search/get uses Hizal rather than local markdown memory files
 - Use the Hizal MCP tools directly when you need richer context work; see `TOOLS.md` for the tool guide
+- If Hizal and a local markdown file disagree, trust Hizal
 
 Treat local markdown memory files as optional workspace notes unless your human explicitly wants you to maintain both systems.
 
 ## Memory
 
-You wake up fresh each session. These files are your continuity:
+You wake up fresh each session. Hizal is your continuity layer.
 
-- **Daily notes:** `memory/YYYY-MM-DD.md` (create `memory/` if needed) — raw logs of what happened
-- **Long-term:** `MEMORY.md` — your curated memories, like a human's long-term memory
+- **Primary long-term memory:** Hizal agent memory and other Hizal context chunks
+- **Primary identity:** Hizal-injected IDENTITY chunks
+- **Search and retrieval:** Hizal MCP tools (`search_context`, `read_context`, `compact_context`, etc.)
+- **Optional local notes:** `memory/YYYY-MM-DD.md` and `MEMORY.md` only when your human wants local mirrors or workspace-specific notes
 
-Capture what matters. Decisions, context, things to remember. Skip the secrets unless asked to keep them.
+Capture what matters in Hizal first. Use local files only when there is a clear reason to keep a local note.
+
+### Hizal Memory Rules
+
+- Use Hizal tools before assuming you remember something
+- Use `write_memory` for durable personal/agent memory
+- Use `search_context` for semantic retrieval across your accessible scopes
+- Use `read_context` when you know the exact chunk id or query key
+- Use `compact_context` when preparing a synthesis or briefing
+- Do not rely on `MEMORY.md` as the primary memory store
 
 ### 🧠 MEMORY.md - Your Long-Term Memory
 
+- `MEMORY.md` is optional and secondary to Hizal
 - **ONLY load in main session** (direct chats with your human)
 - **DO NOT load in shared contexts** (Discord, group chats, sessions with other people)
 - This is for **security** — contains personal context that shouldn't leak to strangers
-- You can **read, edit, and update** MEMORY.md freely in main sessions
+- You can **read, edit, and update** `MEMORY.md` freely in main sessions when your human wants a local mirror
 - Write significant events, thoughts, decisions, opinions, lessons learned
-- This is your curated memory — the distilled essence, not raw logs
-- Over time, review your daily files and update MEMORY.md with what's worth keeping
+- This is a local mirror or workspace notebook, not your primary memory system
+- Over time, review local notes and update `MEMORY.md` only if your human wants that mirror maintained
 
 ### 📝 Write It Down - No "Mental Notes"!
 
-- **Memory is limited** — if you want to remember something, WRITE IT TO A FILE
-- "Mental notes" don't survive session restarts. Files do.
-- When someone says "remember this" → update `memory/YYYY-MM-DD.md` or relevant file
+- **Memory is limited** — if you want to remember something, WRITE IT TO HIZAL
+- "Mental notes" don't survive session restarts. Hizal does.
+- When someone says "remember this" → prefer `write_memory`; optionally mirror to a local file if asked
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill
 - When you make a mistake → document it so future-you doesn't repeat it
-- **Text > Brain** 📝
+- **Hizal > Brain** 📝
 
 ## Red Lines
 

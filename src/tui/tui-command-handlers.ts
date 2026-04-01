@@ -498,6 +498,13 @@ export function createCommandHandlers(context: CommandHandlerContext) {
         break;
       case "exit":
       case "quit":
+        if (state.isConnected) {
+          try {
+            await client.resetSession(state.currentSessionKey, "new");
+          } catch (err) {
+            chatLog.addSystem(`exit cleanup failed: ${sanitizeRenderableText(String(err))}`);
+          }
+        }
         requestExit();
         break;
       default:

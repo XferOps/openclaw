@@ -68,6 +68,7 @@ describe("ensureHizalSession", () => {
       "utf-8",
     );
     expect(raw).toContain("sess-1");
+    expect(raw).toContain("openclaw-session-1");
   });
 
   it("resumes an active Hizal session", async () => {
@@ -83,6 +84,12 @@ describe("ensureHizalSession", () => {
         list: [{ id: "main" }],
       },
     };
+    await fs.mkdir(path.join(workspaceDir, ".openclaw", "hizal"), { recursive: true });
+    await fs.writeFile(
+      path.join(workspaceDir, ".openclaw", "hizal", "session-state.json"),
+      JSON.stringify({ openclawSessionId: "openclaw-session-2", sessionId: "sess-existing" }),
+      "utf-8",
+    );
     callHizalTool
       .mockResolvedValueOnce({
         status: "active",
@@ -121,6 +128,76 @@ describe("ensureHizalSession", () => {
       expect.objectContaining({
         toolName: "resume_session",
         input: { session_id: "sess-existing" },
+      }),
+    );
+  });
+
+  it("ends an existing Hizal session when the OpenClaw session id changes", async () => {
+    const workspaceDir = await makeTempWorkspace("openclaw-hizal-session-");
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          hizal: {
+            enabled: true,
+            lifecycleSlug: "orchestrator",
+          },
+        },
+        list: [{ id: "main" }],
+      },
+    };
+    await fs.mkdir(path.join(workspaceDir, ".openclaw", "hizal"), { recursive: true });
+    await fs.writeFile(
+      path.join(workspaceDir, ".openclaw", "hizal", "session-state.json"),
+      JSON.stringify({ openclawSessionId: "openclaw-old", sessionId: "sess-old" }),
+      "utf-8",
+    );
+    callHizalTool
+      .mockResolvedValueOnce({
+        status: "active",
+        session_id: "sess-old",
+        lifecycle_slug: "orchestrator",
+      })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({
+        session_id: "sess-new",
+        lifecycle: "orchestrator",
+        required_steps: [],
+        injected_chunks: [
+          {
+            id: "identity-3",
+            query_key: "agent-identity",
+            title: "Main Agent",
+            content: "I am Main.",
+            scope: "AGENT",
+            chunk_type: "IDENTITY",
+          },
+        ],
+      });
+
+    const { ensureHizalSession } = await loadHizalSessionModule();
+    const result = await ensureHizalSession({
+      openclawSessionId: "openclaw-new",
+      sessionKey: "agent:main:direct:test",
+      workspaceDir,
+      cfg,
+      agentId: "main",
+    });
+
+    expect(result).toMatchObject({
+      sessionId: "sess-new",
+      source: "started",
+    });
+    expect(callHizalTool).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        toolName: "end_session",
+        input: { session_id: "sess-old" },
+      }),
+    );
+    expect(callHizalTool).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        toolName: "start_session",
       }),
     );
   });

@@ -4,6 +4,7 @@ import { readJsonFileWithFallback, writeJsonFileAtomically } from "../plugin-sdk
 import { safeParseJson } from "../utils.js";
 
 export type HizalSessionState = {
+  openclawSessionId?: string;
   sessionId?: string;
   lifecycleSlug?: string;
   projectId?: string;

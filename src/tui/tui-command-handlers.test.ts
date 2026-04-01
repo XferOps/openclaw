@@ -14,6 +14,7 @@ function createHarness(params?: {
   refreshSessionInfo?: ReturnType<typeof vi.fn>;
   applySessionInfoFromPatch?: ReturnType<typeof vi.fn>;
   setActivityStatus?: SetActivityStatusMock;
+  requestExit?: ReturnType<typeof vi.fn>;
   isConnected?: boolean;
   activeChatRunId?: string | null;
 }) {
@@ -31,6 +32,7 @@ function createHarness(params?: {
   const refreshSessionInfo = params?.refreshSessionInfo ?? vi.fn().mockResolvedValue(undefined);
   const applySessionInfoFromPatch = params?.applySessionInfoFromPatch ?? vi.fn();
   const setActivityStatus = params?.setActivityStatus ?? (vi.fn() as SetActivityStatusMock);
+  const requestExit = (params?.requestExit ?? vi.fn()) as () => void;
   const state = {
     currentSessionKey: "agent:main:main",
     activeChatRunId: params?.activeChatRunId ?? null,
@@ -60,7 +62,7 @@ function createHarness(params?: {
     noteLocalBtwRunId,
     forgetLocalRunId: vi.fn(),
     forgetLocalBtwRunId: vi.fn(),
-    requestExit: vi.fn(),
+    requestExit,
   });
 
   return {
@@ -78,6 +80,7 @@ function createHarness(params?: {
     setActivityStatus,
     noteLocalRunId,
     noteLocalBtwRunId,
+    requestExit,
     state,
   };
 }
@@ -231,6 +234,29 @@ describe("tui command handlers", () => {
 
     expect(patchSession).not.toHaveBeenCalled();
     expect(addSystem).toHaveBeenCalledWith("usage: /activation <mention|always>");
+  });
+
+  it("resets the current session before /exit", async () => {
+    const requestExit = vi.fn();
+    const { handleCommand, resetSession } = createHarness({ requestExit });
+
+    await handleCommand("/exit");
+
+    expect(resetSession).toHaveBeenCalledWith("agent:main:main", "new");
+    expect(requestExit).toHaveBeenCalledTimes(1);
+  });
+
+  it("still exits when /exit cleanup fails", async () => {
+    const requestExit = vi.fn();
+    const { handleCommand, addSystem } = createHarness({
+      requestExit,
+      resetSession: vi.fn().mockRejectedValue(new Error("boom")),
+    });
+
+    await handleCommand("/exit");
+
+    expect(addSystem).toHaveBeenCalledWith("exit cleanup failed: Error: boom");
+    expect(requestExit).toHaveBeenCalledTimes(1);
   });
 
   it("patches the session for valid /activation values", async () => {
