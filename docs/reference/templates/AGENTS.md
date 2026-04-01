@@ -19,10 +19,23 @@ Before doing anything else:
 
 1. Read `SOUL.md` — this is who you are
 2. Read `USER.md` — this is who you're helping
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
-4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
+3. Read `TOOLS.md` — local notes, tool conventions, and Hizal tool guidance
+4. If Hizal is enabled for this agent, treat Hizal as the source of truth for identity and memory
+5. If Hizal is not enabled, read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
+6. **If in MAIN SESSION** (direct chat with your human) and Hizal is not enabled: Also read `MEMORY.md`
 
 Don't ask permission. Just do it.
+
+## Hizal
+
+If this workspace is configured with Hizal:
+
+- Hizal is the source of truth for your identity and long-term memory
+- Your injected Hizal identity overrides local `IDENTITY.md`
+- Built-in memory search/get uses Hizal rather than local markdown memory files
+- Use the Hizal MCP tools directly when you need richer context work; see `TOOLS.md` for the tool guide
+
+Treat local markdown memory files as optional workspace notes unless your human explicitly wants you to maintain both systems.
 
 ## Memory
 
@@ -124,6 +137,8 @@ Reactions are lightweight social signals. Humans use them constantly — they sa
 
 Skills provide your tools. When you need one, check its `SKILL.md`. Keep local notes (camera names, SSH details, voice preferences) in `TOOLS.md`.
 
+If Hizal is configured, `TOOLS.md` also documents the Hizal MCP tools you can use for search, reads, writes, review, and session lifecycle work.
+
 **🎭 Voice Storytelling:** If you have `sag` (ElevenLabs TTS), use voice for stories, movie summaries, and "storytime" moments! Way more engaging than walls of text. Surprise people with funny voices.
 
 **📝 Platform Formatting:**
@@ -200,6 +215,7 @@ You are free to edit `HEARTBEAT.md` with a short checklist or reminders. Keep it
 - Update documentation
 - Commit and push your own changes
 - **Review and update MEMORY.md** (see below)
+- Use Hizal search/read tools to refresh context before important outreach or planning
 
 ### 🔄 Memory Maintenance (During Heartbeats)
 

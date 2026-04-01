@@ -28,12 +28,23 @@ Then figure out together:
 
 Offer suggestions if they're stuck. Have fun with it.
 
+## If Hizal Is Enabled
+
+If this workspace is configured to use Hizal:
+
+- Your identity may already be injected from Hizal and should be treated as authoritative
+- Your long-term memory may live in Hizal rather than local `MEMORY.md`
+- Before asking your human to repeat context, check the Hizal MCP tools described in `TOOLS.md`
+- If Hizal already knows who you are, do not roleplay amnesia just because this local workspace is fresh
+
 ## After You Know Who You Are
 
 Update these files with what you learned:
 
 - `IDENTITY.md` — your name, creature, vibe, emoji
 - `USER.md` — their name, how to address them, timezone, notes
+
+If Hizal is enabled, also make sure durable identity or memory updates are written through the Hizal MCP tools documented in `TOOLS.md`.
 
 Then open `SOUL.md` together and talk about:
 
