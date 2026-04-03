@@ -32,7 +32,7 @@ If this workspace is configured for Hizal, use the Hizal MCP tools as your remot
 
 ### Session Lifecycle
 
-- `start_session` — begins a session and returns inject-audience-matching chunks for the agent
+- `start_session` — begins a session and returns inject-audience-matching chunks for the agent; **check `injected_chunks` immediately** — these are your always-inject IDENTITY and PRINCIPLE chunks already loaded into context. Don't re-search for them.
 - `get_active_session` — recover the current session id after context reset or reconnect
 - `resume_session` — extend session TTL and re-inject matching chunks
 - `register_focus` — declare current task and tags; enables focus-tag-based chunk injection when configured
@@ -40,7 +40,12 @@ If this workspace is configured for Hizal, use the Hizal MCP tools as your remot
 
 ### Read/Search
 
-- `search_context` — semantic search across all accessible scopes (project, agent, org), filterable by `chunk_type`, `scope`, `agent_id`, `project_id`, `org_id`, `query_key`, and more
+- `search_context` — semantic search across all accessible scopes by default. Narrow with `scope` when you need it:
+  - `scope: "ORG"` — only org-wide chunks (PRINCIPLE, KNOWLEDGE)
+  - `scope: "AGENT"` — only your own memory and identity
+  - `scope: "PROJECT"` — only project-specific context (requires `project_id`)
+  - Other filters: `chunk_type`, `always_inject_only`, `query_key`, `limit` (default 10)
+  - ⚠️ **Note:** search results do not return `scope` or `chunk_type` fields — you can't distinguish chunk origins from result data alone
 - `read_context` — fetch a specific chunk by `id` or `query_key`
 - `compact_context` — retrieve related chunks for agent-side synthesis (read-only)
 - `get_context_versions` — inspect version history for a chunk
@@ -76,6 +81,7 @@ If this workspace is configured for Hizal, use the Hizal MCP tools as your remot
 - Use session lifecycle tools intentionally; do not leave long-running work floating without a session plan
 - Keep writes concise, specific, and reusable
 - Do not delete or overwrite context casually; prefer versioned updates and reviews
+- After `start_session`, inspect `stale_signals` on search results — if present, the chunk may need `update_context` or `review_context`
 
 ### How `inject_audience` Works
 
@@ -85,7 +91,11 @@ If this workspace is configured for Hizal, use the Hizal MCP tools as your remot
 - Chunks without `inject_audience` are search-only
 - The rule format is disjunctive normal form (DNF): rules are OR'd together, conditions within one rule are AND'd together
 
-Example:
+Examples:
+
+```json
+{ "rules": [{ "all": true }] }
+```
 
 ```json
 {
@@ -100,7 +110,7 @@ This means:
 
 Available predicates include:
 
-- `all`
+- `all: true` <- boolean flag; matches unconditionally
 - `agent_ids`
 - `agent_types`
 - `project_ids`
@@ -111,27 +121,10 @@ Available predicates include:
 
 Important defaults to remember:
 
-- `IDENTITY` is typically always injected for the owning agent
-- `MEMORY` is typically search-only unless explicitly given injection rules
-- `focus_tags` rules only matter after `register_focus(...)`
-
-## Examples
-
-```markdown
-### Cameras
-
-- living-room → Main area, 180° wide angle
-- front-door → Entrance, motion-triggered
-
-### SSH
-
-- home-server → 192.168.1.100, user: admin
-
-### TTS
-
-- Preferred voice: "Nova" (warm, slightly British)
-- Default speaker: Kitchen HomePod
-```
+- write_identity, write_convention, and store_principle auto-apply {"rules":[{"all":true}]} as the inject_audience default — you don't need to specify it. write_memory, write_knowledge, write_org_knowledge, and write_chunk do NOT auto-inject — inject_audience is null unless you pass it explicitly.
+- When register_focus is called, chunks with matching focus_tags rules are added to the session's inject_set immediately — they don't require a session restart.
+- agent_tags — matches against the agent's permanent tag profile; no register_focus required
+- focus_tags — matches against the current session focus tags; only populated after register_focus
 
 ## Why Separate?
 

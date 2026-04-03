@@ -22,7 +22,7 @@ read_when:
 
 # - Prefer Hizal over local markdown memory for continuity
 
-# - Search Hizal for unresolved follow-ups before checking email or drafting updates
+# - Exhaustively search Hizal for unresolved follow-ups before checking email or drafting updates
 
 # - Use Hizal context to avoid repeating work or re-asking for known information
 
