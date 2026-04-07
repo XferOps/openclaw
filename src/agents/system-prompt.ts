@@ -40,14 +40,44 @@ function buildMemorySection(params: {
   isMinimal: boolean;
   availableTools: Set<string>;
   citationsMode?: MemoryCitationsMode;
+  hizalEnabled?: boolean;
 }) {
-  if (params.isMinimal) {
+  if (params.isMinimal || params.hizalEnabled) {
     return [];
   }
   return buildMemoryPromptSection({
     availableTools: params.availableTools,
     citationsMode: params.citationsMode,
   });
+}
+
+function buildHizalSection(params: {
+  isMinimal: boolean;
+  hizal?: {
+    enabled?: boolean;
+    projectId?: string;
+    lifecycleSlug?: string;
+  };
+}) {
+  if (params.isMinimal || params.hizal?.enabled !== true) {
+    return [];
+  }
+  const lines = [
+    "## Hizal",
+    "Hizal is the primary continuity layer for identity and long-term memory in this session.",
+    "Treat injected Hizal context as authoritative ambient context; do not re-search for already-injected identity, principles, or conventions before using them.",
+    "For prior work, decisions, preferences, or other continuity questions, prefer Hizal tools before asking the user to repeat context.",
+    "Legacy workspace files such as SOUL.md, USER.md, MEMORY.md, and BOOTSTRAP.md are optional local notes in this fork, not the source of truth.",
+    "When a fact should persist beyond the current turn, write it to Hizal instead of relying on local markdown memory files.",
+  ];
+  if (params.hizal.lifecycleSlug) {
+    lines.push(`Current Hizal lifecycle: ${params.hizal.lifecycleSlug}.`);
+  }
+  if (params.hizal.projectId) {
+    lines.push(`Current Hizal project: ${params.hizal.projectId}.`);
+  }
+  lines.push("");
+  return lines;
 }
 
 function buildUserIdentitySection(ownerLine: string | undefined, isMinimal: boolean) {
@@ -232,6 +262,11 @@ export function buildAgentSystemPrompt(params: {
     channel: string;
   };
   memoryCitationsMode?: MemoryCitationsMode;
+  hizal?: {
+    enabled?: boolean;
+    projectId?: string;
+    lifecycleSlug?: string;
+  };
 }) {
   const acpEnabled = params.acpEnabled !== false;
   const sandboxedRuntime = params.sandboxInfo?.enabled === true;
@@ -269,6 +304,21 @@ export function buildAgentSystemPrompt(params: {
       "Show a /status-equivalent status card (usage + time + Reasoning/Verbose/Elevated); use for model-use questions (📊 session_status); optional per-session model override",
     image: "Analyze an image with the configured image model",
     image_generate: "Generate images with the configured image-generation model",
+    get_active_session: "Get the current Hizal session for this agent",
+    start_session: "Start a Hizal session and receive injected context",
+    resume_session: "Extend the active Hizal session and refresh injected context",
+    register_focus: "Register the current task/focus for the Hizal session",
+    end_session: "End the Hizal session and surface written chunks for review",
+    search_context: "Semantic search across Hizal context",
+    read_context: "Read a specific Hizal context chunk",
+    compact_context: "Retrieve related Hizal chunks for synthesis",
+    write_memory: "Write durable agent memory to Hizal",
+    write_identity: "Write durable agent identity to Hizal",
+    write_knowledge: "Write durable project knowledge to Hizal",
+    write_convention: "Write durable project conventions to Hizal",
+    write_org_knowledge: "Write durable org knowledge to Hizal",
+    update_context: "Update an existing Hizal context chunk with versioning",
+    review_context: "Review usefulness or correctness of a Hizal chunk",
   };
 
   const toolOrder = [
@@ -298,6 +348,21 @@ export function buildAgentSystemPrompt(params: {
     "session_status",
     "image",
     "image_generate",
+    "get_active_session",
+    "start_session",
+    "resume_session",
+    "register_focus",
+    "end_session",
+    "search_context",
+    "read_context",
+    "compact_context",
+    "write_memory",
+    "write_identity",
+    "write_knowledge",
+    "write_convention",
+    "write_org_knowledge",
+    "update_context",
+    "review_context",
   ];
 
   const rawToolNames = (params.toolNames ?? []).map((tool) => tool.trim());
@@ -405,6 +470,11 @@ export function buildAgentSystemPrompt(params: {
     isMinimal,
     availableTools,
     citationsMode: params.memoryCitationsMode,
+    hizalEnabled: params.hizal?.enabled,
+  });
+  const hizalSection = buildHizalSection({
+    isMinimal,
+    hizal: params.hizal,
   });
   const docsSection = buildDocsSection({
     docsPath: params.docsPath,
@@ -481,6 +551,7 @@ export function buildAgentSystemPrompt(params: {
     "If unsure, ask the user to run `openclaw help` (or `openclaw gateway --help`) and paste the output.",
     "",
     ...skillsSection,
+    ...hizalSection,
     ...memorySection,
     // Skip self-update for subagent/none modes
     hasGateway && !isMinimal ? "## OpenClaw Self-Update" : "",
@@ -622,17 +693,7 @@ export function buildAgentSystemPrompt(params: {
   if (validContextFiles.length > 0) {
     lines.push("# Project Context", "");
     if (validContextFiles.length > 0) {
-      const hasSoulFile = validContextFiles.some((file) => {
-        const normalizedPath = file.path.trim().replace(/\\/g, "/");
-        const baseName = normalizedPath.split("/").pop() ?? normalizedPath;
-        return baseName.toLowerCase() === "soul.md";
-      });
       lines.push("The following project context files have been loaded:");
-      if (hasSoulFile) {
-        lines.push(
-          "If SOUL.md is present, embody its persona and tone. Avoid stiff, generic replies; follow its guidance unless higher-priority instructions override it.",
-        );
-      }
       lines.push("");
     }
     for (const file of validContextFiles) {

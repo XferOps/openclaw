@@ -566,6 +566,30 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain("Bravo");
   });
 
+  it("includes Hizal guidance and suppresses local memory recall when enabled", () => {
+    const prompt = buildAgentSystemPrompt({
+      workspaceDir: "/tmp/openclaw",
+      toolNames: ["search_context", "write_memory", "memory_search"],
+      hizal: {
+        enabled: true,
+        projectId: "project-123",
+        lifecycleSlug: "orchestrator",
+      },
+    });
+
+    expect(prompt).toContain("## Hizal");
+    expect(prompt).toContain(
+      "Hizal is the primary continuity layer for identity and long-term memory",
+    );
+    expect(prompt).toContain("Treat injected Hizal context as authoritative ambient context");
+    expect(prompt).toContain(
+      "Legacy workspace files such as SOUL.md, USER.md, MEMORY.md, and BOOTSTRAP.md are optional local notes",
+    );
+    expect(prompt).toContain("Current Hizal lifecycle: orchestrator.");
+    expect(prompt).toContain("Current Hizal project: project-123.");
+    expect(prompt).not.toContain("## Memory Recall");
+  });
+
   it("ignores context files with missing or blank paths", () => {
     const prompt = buildAgentSystemPrompt({
       workspaceDir: "/tmp/openclaw",
@@ -583,7 +607,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).not.toContain("Blank path");
   });
 
-  it("adds SOUL guidance when a soul file is present", () => {
+  it("does not add special SOUL guidance when a soul file is present", () => {
     const prompt = buildAgentSystemPrompt({
       workspaceDir: "/tmp/openclaw",
       contextFiles: [
@@ -592,9 +616,7 @@ describe("buildAgentSystemPrompt", () => {
       ],
     });
 
-    expect(prompt).toContain(
-      "If SOUL.md is present, embody its persona and tone. Avoid stiff, generic replies; follow its guidance unless higher-priority instructions override it.",
-    );
+    expect(prompt).not.toContain("If SOUL.md is present, embody its persona and tone.");
   });
 
   it("omits project context when no context files are injected", () => {

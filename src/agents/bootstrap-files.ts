@@ -1,5 +1,6 @@
 import type { OpenClawConfig } from "../config/config.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../routing/session-key.js";
+import { resolveAgentHizalConfig } from "./agent-scope.js";
 import { getOrLoadBootstrapFiles } from "./bootstrap-cache.js";
 import { applyBootstrapHookOverrides } from "./bootstrap-hooks.js";
 import { createSyntheticIdentityBootstrapFile, resolveHizalIdentity } from "./hizal-identity.js";
@@ -11,9 +12,20 @@ import {
 } from "./pi-embedded-helpers.js";
 import {
   filterBootstrapFilesForSession,
+  DEFAULT_AGENTS_FILENAME,
+  DEFAULT_HEARTBEAT_FILENAME,
+  DEFAULT_IDENTITY_FILENAME,
+  DEFAULT_TOOLS_FILENAME,
   loadWorkspaceBootstrapFiles,
   type WorkspaceBootstrapFile,
 } from "./workspace.js";
+
+const HIZAL_BOOTSTRAP_ALLOWLIST = new Set([
+  DEFAULT_AGENTS_FILENAME,
+  DEFAULT_TOOLS_FILENAME,
+  DEFAULT_IDENTITY_FILENAME,
+  DEFAULT_HEARTBEAT_FILENAME,
+]);
 
 export type BootstrapContextMode = "full" | "lightweight";
 export type BootstrapContextRunKind = "default" | "heartbeat" | "cron";
@@ -97,6 +109,21 @@ async function applyHizalIdentityOverlay(params: {
   ];
 }
 
+function filterHizalBootstrapFiles(params: {
+  files: WorkspaceBootstrapFile[];
+  config?: OpenClawConfig;
+  agentId?: string;
+}) {
+  if (!params.config || !params.agentId) {
+    return params.files;
+  }
+  const hizalConfig = resolveAgentHizalConfig(params.config, params.agentId);
+  if (hizalConfig?.enabled !== true) {
+    return params.files;
+  }
+  return params.files.filter((file) => HIZAL_BOOTSTRAP_ALLOWLIST.has(file.name));
+}
+
 export async function resolveBootstrapFilesForRun(params: {
   workspaceDir: string;
   config?: OpenClawConfig;
@@ -127,9 +154,14 @@ export async function resolveBootstrapFilesForRun(params: {
     sessionId: params.sessionId,
     agentId: params.agentId,
   });
+  const filteredForHizal = filterHizalBootstrapFiles({
+    files: hizalAdjustedFiles,
+    config: params.config,
+    agentId: params.agentId,
+  });
 
   const updated = await applyBootstrapHookOverrides({
-    files: hizalAdjustedFiles,
+    files: filteredForHizal,
     workspaceDir: params.workspaceDir,
     config: params.config,
     sessionKey: params.sessionKey,

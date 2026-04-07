@@ -121,6 +121,42 @@ describe("resolveBootstrapFilesForRun", () => {
     expect(identity?.content).toContain("remote identity");
     expect(identity?.path).toContain(path.join(".openclaw", "hizal", "IDENTITY.md"));
   });
+
+  it("drops legacy local context files for Hizal-enabled sessions", async () => {
+    const workspaceDir = await makeTempWorkspace("openclaw-bootstrap-");
+    await Promise.all([
+      fs.writeFile(path.join(workspaceDir, "SOUL.md"), "local soul", "utf8"),
+      fs.writeFile(path.join(workspaceDir, "USER.md"), "local user", "utf8"),
+      fs.writeFile(path.join(workspaceDir, "MEMORY.md"), "local memory", "utf8"),
+      fs.writeFile(path.join(workspaceDir, "BOOTSTRAP.md"), "local bootstrap", "utf8"),
+      fs.writeFile(path.join(workspaceDir, "HEARTBEAT.md"), "local heartbeat", "utf8"),
+    ]);
+    resolveHizalIdentity.mockResolvedValue({
+      markdown: "# Hizal Identity\n\nremote identity\n",
+    });
+
+    const files = await resolveBootstrapFilesForRun({
+      workspaceDir,
+      config: {
+        agents: {
+          defaults: {
+            hizal: { enabled: true },
+          },
+          list: [{ id: "main" }],
+        },
+      },
+      sessionKey: "agent:main:direct:test",
+      sessionId: "openclaw-session-4",
+      agentId: "main",
+    });
+
+    expect(files.map((file) => file.name)).toEqual([
+      "AGENTS.md",
+      "TOOLS.md",
+      "HEARTBEAT.md",
+      "IDENTITY.md",
+    ]);
+  });
 });
 
 describe("resolveBootstrapContextForRun", () => {

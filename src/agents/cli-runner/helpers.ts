@@ -10,6 +10,7 @@ import type { OpenClawConfig } from "../../config/config.js";
 import type { CliBackendConfig } from "../../config/types.js";
 import { MAX_IMAGE_BYTES } from "../../media/constants.js";
 import { buildTtsSystemPromptHint } from "../../tts/tts.js";
+import { resolveAgentHizalConfig } from "../agent-scope.js";
 import { buildModelAliasLines } from "../model-alias-lines.js";
 import { resolveDefaultModelForAgent } from "../model-selection.js";
 import { resolveOwnerDisplaySetting } from "../owner-display.js";
@@ -82,6 +83,10 @@ export function buildSystemPrompt(params: {
     contextFiles: params.contextFiles,
     ttsHint,
     memoryCitationsMode: params.config?.memory?.citations,
+    hizal:
+      params.config && params.agentId
+        ? resolveAgentHizalConfig(params.config, params.agentId)
+        : undefined,
   });
 }
 
