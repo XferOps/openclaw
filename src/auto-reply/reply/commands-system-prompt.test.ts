@@ -25,6 +25,8 @@ vi.mock("../../agents/skills/refresh.js", () => ({
 }));
 
 vi.mock("../../agents/agent-scope.js", () => ({
+  resolveAgentConfig: vi.fn(() => undefined),
+  resolveAgentHizalConfig: vi.fn(() => undefined),
   resolveSessionAgentIds: vi.fn(() => ({ sessionAgentId: "main" })),
 }));
 
@@ -43,10 +45,6 @@ vi.mock("../../agents/system-prompt-params.js", () => ({
 
 vi.mock("../../agents/system-prompt.js", () => ({
   buildAgentSystemPrompt: vi.fn(() => "system prompt"),
-}));
-
-vi.mock("../../agents/tool-summaries.js", () => ({
-  buildToolSummaryMap: vi.fn(() => ({})),
 }));
 
 vi.mock("../../infra/skills-remote.js", () => ({
