@@ -1,6 +1,7 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { resolveAgentHizalConfig, resolveSessionAgentIds } from "../../agents/agent-scope.js";
 import { resolveBootstrapContextForRun } from "../../agents/bootstrap-files.js";
+import { canExecRequestNode } from "../../agents/exec-defaults.js";
 import { resolveDefaultModelForAgent } from "../../agents/model-selection.js";
 import type { EmbeddedContextFile } from "../../agents/pi-embedded-helpers.js";
 import { createOpenClawCodingTools } from "../../agents/pi-tools.js";
@@ -9,7 +10,6 @@ import { buildWorkspaceSkillSnapshot } from "../../agents/skills.js";
 import { getSkillsSnapshotVersion } from "../../agents/skills/refresh.js";
 import { buildSystemPromptParams } from "../../agents/system-prompt-params.js";
 import { buildAgentSystemPrompt } from "../../agents/system-prompt.js";
-import { buildToolSummaryMap } from "../../agents/tool-summaries.js";
 import type { WorkspaceBootstrapFile } from "../../agents/workspace.js";
 import { getRemoteSkillEligibility } from "../../infra/skills-remote.js";
 import { buildTtsSystemPromptHint } from "../../tts/tts.js";
@@ -40,11 +40,25 @@ export async function resolveCommandsSystemPromptBundle(
     sessionId: params.sessionEntry?.sessionId,
     agentId: sessionAgentId,
   });
+  const sandboxRuntime = resolveSandboxRuntimeStatus({
+    cfg: params.cfg,
+    sessionKey: params.ctx.SessionKey ?? params.sessionKey,
+  });
   const skillsSnapshot = (() => {
     try {
       return buildWorkspaceSkillSnapshot(workspaceDir, {
         config: params.cfg,
-        eligibility: { remote: getRemoteSkillEligibility() },
+        agentId: sessionAgentId,
+        eligibility: {
+          remote: getRemoteSkillEligibility({
+            advertiseExecNode: canExecRequestNode({
+              cfg: params.cfg,
+              sessionEntry: params.sessionEntry,
+              sessionKey: params.sessionKey,
+              agentId: sessionAgentId,
+            }),
+          }),
+        },
         snapshotVersion: getSkillsSnapshotVersion(workspaceDir),
       });
     } catch {
@@ -52,10 +66,6 @@ export async function resolveCommandsSystemPromptBundle(
     }
   })();
   const skillsPrompt = skillsSnapshot.prompt ?? "";
-  const sandboxRuntime = resolveSandboxRuntimeStatus({
-    cfg: params.cfg,
-    sessionKey: params.ctx.SessionKey ?? params.sessionKey,
-  });
   const tools = (() => {
     try {
       return createOpenClawCodingTools({
@@ -77,7 +87,6 @@ export async function resolveCommandsSystemPromptBundle(
       return [];
     }
   })();
-  const toolSummaries = buildToolSummaryMap(tools);
   const toolNames = tools.map((t) => t.name);
   const defaultModelRef = resolveDefaultModelForAgent({
     cfg: params.cfg,
@@ -119,7 +128,6 @@ export async function resolveCommandsSystemPromptBundle(
     ownerNumbers: undefined,
     reasoningTagHint: false,
     toolNames,
-    toolSummaries,
     modelAliasLines: [],
     userTimezone,
     userTime,
