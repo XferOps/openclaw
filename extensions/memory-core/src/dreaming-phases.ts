@@ -1555,24 +1555,26 @@ async function runPhaseIfTriggered(params: {
   for (const workspaceDir of workspaces) {
     try {
       if (params.phase === "light") {
+        const config = params.config as MemoryLightDreamingConfig & {
+          timezone?: string;
+          storage: { mode: "inline" | "separate" | "both"; separateReports: boolean };
+        };
         await runLightDreaming({
           workspaceDir,
           cfg: params.cfg,
-          config: params.config as MemoryLightDreamingConfig & {
-            timezone?: string;
-            storage: { mode: "inline" | "separate" | "both"; separateReports: boolean };
-          },
+          config,
           logger: params.logger,
           subagent: params.subagent,
         });
       } else {
+        const config = params.config as MemoryRemDreamingConfig & {
+          timezone?: string;
+          storage: { mode: "inline" | "separate" | "both"; separateReports: boolean };
+        };
         await runRemDreaming({
           workspaceDir,
           cfg: params.cfg,
-          config: params.config as MemoryRemDreamingConfig & {
-            timezone?: string;
-            storage: { mode: "inline" | "separate" | "both"; separateReports: boolean };
-          },
+          config,
           logger: params.logger,
           subagent: params.subagent,
         });

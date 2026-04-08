@@ -2,8 +2,13 @@
 
 export type { AnyAgentTool } from "../agents/tools/common.js";
 export { resolveCronStyleNow } from "../agents/current-time.js";
+export { callHizalTool } from "../agents/hizal-mcp.ts";
 export { DEFAULT_PI_COMPACTION_RESERVE_TOKENS_FLOOR } from "../agents/pi-settings.js";
-export { resolveDefaultAgentId, resolveSessionAgentId } from "../agents/agent-scope.js";
+export {
+  resolveAgentHizalConfig,
+  resolveDefaultAgentId,
+  resolveSessionAgentId,
+} from "../agents/agent-scope.js";
 export { resolveMemorySearchConfig } from "../agents/memory-search.js";
 export { jsonResult, readNumberParam, readStringParam } from "../agents/tools/common.js";
 export { SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";

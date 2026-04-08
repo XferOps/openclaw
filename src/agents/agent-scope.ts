@@ -3,8 +3,8 @@ import path from "node:path";
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveAgentModelFallbackValues } from "../config/model-input.js";
 import { resolveStateDir } from "../config/paths.js";
-import type { HizalAgentConfig } from "../config/types.hizal.js";
 import type { AgentDefaultsConfig } from "../config/types.agent-defaults.js";
+import type { HizalAgentConfig } from "../config/types.hizal.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   DEFAULT_AGENT_ID,
@@ -193,22 +193,6 @@ export function resolveAgentHizalConfig(
     projectId: overrides?.projectId ?? defaults?.projectId,
     serverName: overrides?.serverName ?? defaults?.serverName,
   };
-}
-
-function resolveModelPrimary(raw: unknown): string | undefined {
-  if (typeof raw === "string") {
-    const trimmed = raw.trim();
-    return trimmed || undefined;
-  }
-  if (!raw || typeof raw !== "object") {
-    return undefined;
-  }
-  const primary = (raw as { primary?: unknown }).primary;
-  if (typeof primary !== "string") {
-    return undefined;
-  }
-  const trimmed = primary.trim();
-  return trimmed || undefined;
 }
 
 export function resolveAgentExplicitModelPrimary(

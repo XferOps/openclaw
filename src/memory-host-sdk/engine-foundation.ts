@@ -2,10 +2,12 @@
 
 export {
   resolveAgentDir,
+  resolveAgentHizalConfig,
   resolveAgentWorkspaceDir,
   resolveDefaultAgentId,
   resolveSessionAgentId,
 } from "../agents/agent-scope.js";
+export { callHizalTool } from "../agents/hizal-mcp.ts";
 export {
   resolveMemorySearchConfig,
   resolveMemorySearchSyncConfig,

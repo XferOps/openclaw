@@ -119,19 +119,13 @@ function resolveCdpPortRangeStart(
 const normalizeStringList = normalizeOptionalTrimmedStringList;
 
 function resolveBrowserSsrFPolicy(cfg: BrowserConfig | undefined): SsrFPolicy | undefined {
-  const rawPolicy = cfg?.ssrfPolicy as
-    | (BrowserConfig["ssrfPolicy"] & { allowPrivateNetwork?: boolean })
-    | undefined;
-  const allowPrivateNetwork = rawPolicy?.allowPrivateNetwork;
+  const rawPolicy = cfg?.ssrfPolicy;
   const dangerouslyAllowPrivateNetwork = rawPolicy?.dangerouslyAllowPrivateNetwork;
   const allowedHostnames = normalizeStringList(rawPolicy?.allowedHostnames);
   const hostnameAllowlist = normalizeStringList(rawPolicy?.hostnameAllowlist);
-  const hasExplicitPrivateSetting =
-    allowPrivateNetwork !== undefined || dangerouslyAllowPrivateNetwork !== undefined;
+  const hasExplicitPrivateSetting = dangerouslyAllowPrivateNetwork !== undefined;
   const resolvedAllowPrivateNetwork =
-    dangerouslyAllowPrivateNetwork === true ||
-    allowPrivateNetwork === true ||
-    !hasExplicitPrivateSetting;
+    dangerouslyAllowPrivateNetwork === true || !hasExplicitPrivateSetting;
 
   if (
     !resolvedAllowPrivateNetwork &&
