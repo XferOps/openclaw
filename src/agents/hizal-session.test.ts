@@ -132,6 +132,54 @@ describe("ensureHizalSession", () => {
     );
   });
 
+  it("resumes an active Hizal session even when injected chunks are omitted", async () => {
+    const workspaceDir = await makeTempWorkspace("openclaw-hizal-session-");
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          hizal: {
+            enabled: true,
+            lifecycleSlug: "orchestrator",
+          },
+        },
+        list: [{ id: "main" }],
+      },
+    };
+    await fs.mkdir(path.join(workspaceDir, ".openclaw", "hizal"), { recursive: true });
+    await fs.writeFile(
+      path.join(workspaceDir, ".openclaw", "hizal", "session-state.json"),
+      JSON.stringify({ openclawSessionId: "openclaw-session-2", sessionId: "sess-existing" }),
+      "utf-8",
+    );
+    callHizalTool
+      .mockResolvedValueOnce({
+        status: "active",
+        session_id: "sess-existing",
+        lifecycle_slug: "orchestrator",
+      })
+      .mockResolvedValueOnce({
+        session_id: "sess-existing",
+        expires_at: "2026-11-05T02:20:32Z",
+        chunks_written: 0,
+        resume_count: 2,
+      });
+
+    const { ensureHizalSession } = await loadHizalSessionModule();
+    const result = await ensureHizalSession({
+      openclawSessionId: "openclaw-session-2",
+      sessionKey: "agent:main:direct:test",
+      workspaceDir,
+      cfg,
+      agentId: "main",
+    });
+
+    expect(result).toMatchObject({
+      sessionId: "sess-existing",
+      source: "resumed",
+      injectedChunks: [],
+    });
+  });
+
   it("ends an existing Hizal session when the OpenClaw session id changes", async () => {
     const workspaceDir = await makeTempWorkspace("openclaw-hizal-session-");
     const cfg: OpenClawConfig = {

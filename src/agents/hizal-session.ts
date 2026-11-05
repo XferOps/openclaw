@@ -34,7 +34,7 @@ type HizalStartSessionResult = {
   expires_at: string;
   lifecycle: string;
   required_steps?: string[];
-  injected_chunks: HizalInjectedChunk[];
+  injected_chunks?: HizalInjectedChunk[];
 };
 
 type HizalResumeSessionResult = {
@@ -43,7 +43,7 @@ type HizalResumeSessionResult = {
   focus_task?: string;
   chunks_written?: number;
   resume_count?: number;
-  injected_chunks: HizalInjectedChunk[];
+  injected_chunks?: HizalInjectedChunk[];
 };
 
 export type EnsureHizalSessionResult = {
@@ -135,7 +135,7 @@ export async function ensureHizalSession(params: {
       lifecycleSlug: active.lifecycle_slug ?? existing.lifecycleSlug ?? runtimeConfig.lifecycleSlug,
       projectId: existing.projectId ?? runtimeConfig.projectId,
       source: "resumed",
-      injectedChunks: resumed.injected_chunks,
+      injectedChunks: resumed.injected_chunks ?? [],
       focusTask: resumed.focus_task,
     };
   }
@@ -166,7 +166,7 @@ export async function ensureHizalSession(params: {
     lifecycleSlug: started.lifecycle,
     projectId: runtimeConfig.projectId,
     source: "started",
-    injectedChunks: started.injected_chunks,
+    injectedChunks: started.injected_chunks ?? [],
     requiredSteps: started.required_steps,
   };
 }

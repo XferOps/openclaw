@@ -1,9 +1,17 @@
 import path from "node:path";
 import type { OpenClawConfig } from "../config/config.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
 import { ensureHizalSession, type HizalInjectedChunk } from "./hizal-session.js";
 import { type HizalIdentitySnapshot, writeHizalIdentitySnapshot } from "./hizal-state.js";
 
 export type HizalResolvedIdentity = HizalIdentitySnapshot;
+
+let log: ReturnType<typeof createSubsystemLogger> | null = null;
+
+function getLog(): ReturnType<typeof createSubsystemLogger> {
+  log ??= createSubsystemLogger("hizal-identity");
+  return log;
+}
 
 function deriveIdentityName(chunk: HizalInjectedChunk): string | undefined {
   const title = chunk.title.trim();
@@ -25,12 +33,10 @@ function buildIdentityMarkdownFromChunk(chunk: HizalInjectedChunk): string {
   return [`# Hizal Identity`, "", chunk.content.trim()].join("\n").trimEnd() + "\n";
 }
 
-export function resolveIdentityChunk(chunks: HizalInjectedChunk[]): HizalInjectedChunk {
-  const match = chunks.find((chunk) => chunk.chunk_type === "IDENTITY");
-  if (!match) {
-    throw new Error("Hizal session did not return an injected IDENTITY chunk");
-  }
-  return match;
+export function resolveIdentityChunk(
+  chunks: HizalInjectedChunk[] | undefined,
+): HizalInjectedChunk | undefined {
+  return chunks?.find((chunk) => chunk.chunk_type === "IDENTITY");
 }
 
 export async function resolveHizalIdentity(params: {
@@ -45,6 +51,15 @@ export async function resolveHizalIdentity(params: {
     return null;
   }
   const chunk = resolveIdentityChunk(session.injectedChunks);
+  if (!chunk) {
+    // Some Hizal session responses (notably resume_session) omit injected
+    // chunks, and a session may legitimately have no IDENTITY chunk. Fall back
+    // to the workspace identity files rather than failing the entire run.
+    getLog().warn(
+      "Hizal session returned no IDENTITY chunk; keeping local workspace identity files.",
+    );
+    return null;
+  }
   const markdown = buildIdentityMarkdownFromChunk(chunk);
   const snapshot: HizalResolvedIdentity = {
     chunkId: chunk.id,
